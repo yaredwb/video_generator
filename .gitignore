@@ -1,6 +1,6 @@
 outputs/
 *.pyc
-__pycache__/
+_pycache_/
 .env
 .venv/
 venv/

@@ -115,6 +115,15 @@ with st.sidebar:
     st.session_state["api_key"] = api_key
 
     st.divider()
+    # Task selection now in sidebar
+    mode = st.selectbox(
+        "Task",
+        options=["Video", "Image"],
+        index=0,
+        help="Choose whether to generate/edit images or generate videos",
+    )
+
+    st.divider()
     st.caption("Models")
     # Video model select box (maps friendly names to model IDs)
     _video_model_options = {
@@ -145,19 +154,12 @@ with st.sidebar:
     )
     st.session_state["image_model_id"] = image_model_id
     
-    st.divider()
-    # Task selection now in sidebar
-    mode = st.selectbox(
-        "Task",
-        options=["Video", "Image"],
-        index=0,
-        help="Choose whether to generate/edit images or generate videos",
-    )
+    
     st.session_state["mode"] = mode
     
     
     st.divider()
-    st.info("Using minimal parameters for Gemini API compatibility (prompt + optional image). Advanced options are disabled.")
+    # st.info("Using minimal parameters for Gemini API compatibility (prompt + optional image). Advanced options are disabled.")
 
 
 if st.session_state.get("mode","Video") == "Image":
