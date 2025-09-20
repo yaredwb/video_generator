@@ -145,7 +145,7 @@ uploaded_image = st.file_uploader(
 if uploaded_image is not None:
     try:
         img = Image.open(uploaded_image)
-        st.image(img, caption="Reference image", use_column_width=True)
+        st.image(img, caption="Reference image", use_container_width=True)
     except Exception:
         st.warning("Could not preview the uploaded image.")
 
