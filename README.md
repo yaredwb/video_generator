@@ -5,8 +5,10 @@ A simple Streamlit web app to generate videos using Google's Veo model via the G
 Features
 - Text-to-video with Veo
 - Optional image-to-video conditioning
-- Minimal parameters for Gemini API compatibility (prompt + optional image)
-- Download generated video, and auto-saves to `outputs/`
+- Image generation and editing with Gemini 2.5 Flash
+  - Single-image edits or multi-image composition/style transfer
+- Minimal parameters for Gemini API compatibility (prompt + optional image(s))
+- Download generated media; videos auto-save to `outputs/`
 
 Prerequisites
 - Python 3.10+

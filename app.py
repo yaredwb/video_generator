@@ -41,6 +41,21 @@ def bytes_from_uploaded_file(uploaded_file) -> bytes:
         return b""
     return uploaded_file.getvalue()
 
+def ensure_img_history():
+    if "img_history" not in st.session_state:
+        st.session_state["img_history"] = []
+    return st.session_state["img_history"]
+
+def push_img_history(png_bytes: bytes, max_items: int = 10):
+    hist = ensure_img_history()
+    hist.append(png_bytes)
+    if len(hist) > max_items:
+        del hist[: len(hist) - max_items]
+
+def get_last_img_bytes():
+    hist = st.session_state.get("img_history") or []
+    return hist[-1] if hist else None
+
 
 def sanitize_filename(text: str, max_len: int = 60) -> str:
     keep = [c for c in text.strip().replace("\n", " ") if c.isalnum() or c in ("-", "_", " ")]
@@ -168,15 +183,37 @@ if st.session_state.get("mode","Video") == "Image":
     img_prompt = st.text_area("Image Prompt", value=st.session_state.get("img_prompt", "A photorealistic nano banana dessert on a glossy plate, Gemini theme."))
     st.session_state["img_prompt"] = img_prompt
 
-    img_upload = None
+    img_uploads = []
     if img_task == "Edit image":
-        img_upload = st.file_uploader("Upload image to edit (PNG/JPG)", type=["png","jpg","jpeg"], accept_multiple_files=False, key="image_edit_upload")
-        if img_upload is not None:
+        img_uploads = st.file_uploader(
+            "Upload one or more images to edit/compose (PNG/JPG)",
+            type=["png","jpg","jpeg"],
+            accept_multiple_files=True,
+            key="image_edit_upload",
+        ) or []
+        if img_uploads:
+            cols = st.columns(min(3, len(img_uploads)))
+            for i, up in enumerate(img_uploads):
+                try:
+                    preview = Image.open(up)
+                    with cols[i % len(cols)]:
+                        st.image(preview, caption=f"Image {i+1}", use_container_width=True)
+                except Exception:
+                    st.warning(f"Could not preview image {i+1}.")
+
+    # Multi-turn option: use last generated image as input
+    last_img_bytes = get_last_img_bytes()
+    use_last = False
+    if last_img_bytes is not None:
+        use_last = st.checkbox("Use last generated image as input", value=False)
+        if use_last:
             try:
-                preview = Image.open(img_upload)
-                st.image(preview, caption="Base image", use_container_width=True)
+                st.image(Image.open(io.BytesIO(last_img_bytes)), caption="Last generated", use_container_width=True)
             except Exception:
-                st.warning("Could not preview the uploaded image.")
+                st.caption("(Could not preview last generated image)")
+        if st.button("Clear image history"):
+            st.session_state["img_history"] = []
+            st.experimental_rerun()
 
     run_img = st.button("Generate Image", type="primary")
     if run_img:
@@ -189,13 +226,22 @@ if st.session_state.get("mode","Video") == "Image":
             st.error(f"Failed to initialize client: {e}")
             st.stop()
         contents = [img_prompt]
-        if img_task == "Edit image" and img_upload is not None:
+        # Include last generated image if requested
+        if use_last and last_img_bytes is not None:
             try:
-                pil_img = Image.open(img_upload)
-                contents.append(pil_img)
+                contents.append(Image.open(io.BytesIO(last_img_bytes)))
             except Exception as e:
-                st.error(f"Failed to read uploaded image: {e}")
+                st.warning(f"Could not add last generated image: {e}")
+        if img_task == "Edit image":
+            if not img_uploads and not use_last:
+                st.error("Please upload at least one image or enable 'Use last generated image'.")
                 st.stop()
+            for up in img_uploads:
+                try:
+                    pil_img = Image.open(up)
+                    contents.append(pil_img)
+                except Exception as e:
+                    st.warning(f"Skipping an image that could not be read: {e}")
         with st.status("Generating image...", expanded=True) as sbox:
             try:
                 resp = client.models.generate_content(model=st.session_state.get("image_model_id","gemini-2.5-flash-image-preview"), contents=contents)
@@ -224,6 +270,7 @@ if st.session_state.get("mode","Video") == "Image":
             if not images:
                 st.error("No image returned.")
                 st.stop()
+            new_history = []
             for idx, (img_obj, data) in enumerate(images, start=1):
                 fname = f"generated_image_{idx}.png"
                 if img_obj is not None:
@@ -234,6 +281,9 @@ if st.session_state.get("mode","Video") == "Image":
                 else:
                     b = data
                 st.download_button(label=f"Download image {idx}", data=b, file_name=fname, mime="image/png")
+                new_history.append(b)
+            for b in new_history:
+                push_img_history(b)
             sbox.update(label="Done", state="complete")
 else:
     # Existing video UI moved under Video branch
