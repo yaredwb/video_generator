@@ -1,6 +1,9 @@
 outputs/
 *.pyc
-_pycache_/
+__pycache__/
 .env
 .venv/
 venv/
+*.pyo
+*.pyd
+*$py.class

@@ -1,8 +1,7 @@
-import io
+﻿import io
 import os
 import time
-import base64
-import pathlib
+
 from datetime import datetime
 
 import streamlit as st
@@ -65,26 +64,38 @@ def sanitize_filename(text: str, max_len: int = 60) -> str:
 
 
 def save_video_bytes(data: bytes, mime_type: str, prompt: str) -> str:
-    ext = ".mp4"
-    if mime_type and "/" in mime_type:
-        subtype = mime_type.split("/", 1)[1]
-        # Basic mapping to extension
-        if subtype == "mp4":
-            ext = ".mp4"
-        elif subtype == "webm":
-            ext = ".webm"
-        elif subtype == "x-matroska" or subtype == "mkv":
-            ext = ".mkv"
-        else:
-            ext = ".bin"
-
-    outputs_dir = pathlib.Path("outputs")
-    outputs_dir.mkdir(parents=True, exist_ok=True)
+    # Deprecated: no longer persist videos to disk by default in Streamlit Cloud.
+    # Kept for compatibility if needed elsewhere.
+    ext = _infer_video_ext(mime_type)
     fname = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{sanitize_filename(prompt)}{ext}"
-    fpath = outputs_dir / fname
-    with open(fpath, "wb") as f:
+    tmp_path = os.path.join(os.getcwd(), fname)
+    with open(tmp_path, "wb") as f:
         f.write(data)
-    return str(fpath)
+    return tmp_path
+
+
+def _infer_video_ext(mime_type: str) -> str:
+    if not mime_type:
+        return ".mp4"
+    try:
+        subtype = mime_type.split("/", 1)[1]
+    except Exception:
+        return ".mp4"
+    if subtype == "mp4":
+        return ".mp4"
+    if subtype == "webm":
+        return ".webm"
+    if subtype in ("x-matroska", "mkv"):
+        return ".mkv"
+    return ".bin"
+
+
+def suggest_video_filename(prompt: str, mime_type: str) -> str:
+    ext = _infer_video_ext(mime_type)
+    return f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{sanitize_filename(prompt)}{ext}"
+
+
+# Note: temp file helpers removed from UI; videos are served from memory for download.
 
 
 def poll_operation_until_done(client, operation, poll_interval: float = 5.0):
@@ -138,7 +149,6 @@ with st.sidebar:
         help="Choose whether to generate/edit images or generate videos",
     )
 
-    st.divider()
     st.caption("Models")
     # Video model select box (maps friendly names to model IDs)
     _video_model_options = {
@@ -349,10 +359,9 @@ else:
             mime_type = mime_attr or "video/mp4"
             if video_bytes:
                 st.success("Video generated!")
-                file_path = save_video_bytes(video_bytes, mime_type, prompt)
                 st.video(video_bytes, format=mime_type, start_time=0)
-                st.download_button(label="Download video", data=video_bytes, file_name=os.path.basename(file_path), mime=mime_type)
-                st.caption(f"Saved to {file_path}")
+                dl_name = suggest_video_filename(prompt, mime_type)
+                st.download_button(label="Download video", data=video_bytes, file_name=dl_name, mime=mime_type)
             elif video_uri:
                 st.success("Video generated (URI provided)!")
                 st.write(f"URI: {video_uri}")

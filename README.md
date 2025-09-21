@@ -8,7 +8,7 @@ Features
 - Image generation and editing with Gemini 2.5 Flash
   - Single-image edits or multi-image composition/style transfer
 - Minimal parameters for Gemini API compatibility (prompt + optional image(s))
-- Download generated media; videos auto-save to `outputs/`
+- Download generated media; no persistent storage by default
 
 Prerequisites
 - Python 3.10+
@@ -45,7 +45,7 @@ Notes
 - Video generation is a long-running operation; the app polls until completion.
 - FPS, audio, compression, resolution, and aspect ratio are not configurable via the Gemini API in this app; model defaults are used.
 - If the API returns a URI instead of bytes, the app will show it; downloading from the URI is not automated here.
-- Generated files are saved to `outputs/` with a timestamp and prompt-based name.
+- Storage efficiency: downloads are served from memory and the app avoids writing to disk on Streamlit Cloud by default.
 
 Troubleshooting
 - If you see `API key not valid` errors, verify the key and that it has Veo access.
