@@ -179,8 +179,9 @@ if mode == "Image":
     # Task options depend on model
     allowed_tasks = ["Generate image"] if current_image_model.startswith("imagen-") else ["Generate image", "Edit image"]
     img_task = st.selectbox("Image Task", allowed_tasks, index=0)
-    img_prompt = st.text_area("Image Prompt", value=st.session_state.get("img_prompt", "A photorealistic nano banana dessert on a glossy plate, Gemini theme."))
-    st.session_state["img_prompt"] = img_prompt
+    if "img_prompt" not in st.session_state:
+        st.session_state["img_prompt"] = "A photorealistic nano banana dessert on a glossy plate, Gemini theme."
+    img_prompt = st.text_area("Image Prompt", key="img_prompt")
 
     # Imagen-specific configuration
     imagen_num_images = None
@@ -349,8 +350,9 @@ else:
         st.video(lv.get("bytes"), format=lv.get("mime", "video/mp4"), start_time=0)
         st.download_button(label="Download last video", data=lv.get("bytes"), file_name=suggest_video_filename(lv.get("prompt", "video"), lv.get("mime", "video/mp4")), mime=lv.get("mime", "video/mp4"), key="dl_last_video")
 
-    prompt = st.text_area("Prompt", value=st.session_state.get("prompt", "Ultra wide drone shot of waves crashing on hawaii."))
-    st.session_state["prompt"] = prompt
+    if "prompt" not in st.session_state:
+        st.session_state["prompt"] = "Ultra wide drone shot of waves crashing on hawaii."
+    prompt = st.text_area("Prompt", key="prompt")
     uploaded_image = st.file_uploader("Optional: Upload an image to guide the video (JPG/PNG)", type=["png", "jpg", "jpeg"], accept_multiple_files=False)
     if uploaded_image is not None:
         try:
